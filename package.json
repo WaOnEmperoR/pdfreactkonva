@@ -7,13 +7,14 @@
   "dependencies": {
     "@babel/runtime": "7.13.8",
     "gulp": "^3.9.1",
+    "konva": "^8.3.12",
     "pdf-image": "2.0.0",
     "pdfjs-dist": "2.6.347",
-    "react": "17.0.1",
-    "react-dom": "17.0.1",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-konva": "^18.2.1",
     "react-pdf-to-image": "1.0.2",
     "react-scripts": "^5.0.1",
-    "webpack": "5.26.3",
     "worker-loader": "3.0.8"
   },
   "devDependencies": {

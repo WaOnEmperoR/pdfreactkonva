@@ -1,12 +1,13 @@
 import React, { useEffect } from "react";
 import "./styles.css";
+import { createRoot } from 'react-dom/client';
+import { Stage, Layer, Star, Text } from 'react-konva';
 
 const PDFJS = window.pdfjsLib;
 
 export default function App() {
   const [pdf, setPdf] = React.useState("");
   const [width, setWidth] = React.useState(0);
-  const [images, setImages] = React.useState([]);
   const [height, setHeight] = React.useState(0);
   const [totalPages, setTotalPages] = React.useState(1);
   const [currentPage, setCurrentPage] = React.useState(0);
@@ -56,36 +57,6 @@ export default function App() {
 
     setSinglePage(img)
     setPageRendering(false)
-  }
-
-  async function renderAllPages() {
-    setPageRendering(true);
-    const imagesList = [];
-    const canvas = document.createElement("canvas");
-    canvas.setAttribute("className", "canv");
-    let canv = document.querySelector(".canv");
-
-    setTotalPages(pdf.numPages)
-    console.log("page lenght", pdf.numPages);
-
-    for (let i = 1; i <= pdf.numPages; i++) {
-      var page = await pdf.getPage(i);
-      var viewport = page.getViewport({ scale: 1 });
-      canvas.height = viewport.height;
-      canvas.width = viewport.width;
-      var render_context = {
-        canvasContext: canvas.getContext("2d"),
-        viewport: viewport
-      };
-
-      setWidth(viewport.width);
-      setHeight(viewport.height);
-      await page.render(render_context).promise;
-      let img = canvas.toDataURL("image/png");
-      imagesList.push(img);
-    }
-    setImages(imagesList);
-    setPageRendering(false);
   }
 
   useEffect(() => {
@@ -147,7 +118,6 @@ export default function App() {
             </div>
           </div>
           <div id="image-convas-row">
-            {/* <canvas id="pdf-canvas" width={width} height={height}></canvas> */}
             <div style={styles.wrapper}>
               <div style={styles.imageWrapper}>
                 <img
@@ -162,21 +132,6 @@ export default function App() {
                   }}
                 />
               </div>
-              {/* {images.map((image, idx) => (
-                <div key={idx} style={styles.imageWrapper}>
-                  <img
-                    id="image-generated"
-                    src={image}
-                    alt="pdfImage"
-                    style={{
-                      width: "100%",
-                      height: "100%",
-                      margin: "0",
-                      border: "none"
-                    }}
-                  />
-                </div>
-              ))} */}
             </div>
           </div>
           <div id="page-loader" hidden={!pageRendering}>
@@ -186,6 +141,12 @@ export default function App() {
           <button>Download PNG</button>
         </div>
       </div>
+
+      <Stage width={100} height={100}>
+        <Layer>
+          <Text text="This is a text"></Text>
+        </Layer>
+      </Stage>
     </div>
   );
 }
