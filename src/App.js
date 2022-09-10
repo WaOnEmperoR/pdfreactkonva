@@ -1,7 +1,7 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useRef } from "react";
 import "./styles.css";
 import { createRoot } from 'react-dom/client';
-import { Stage, Layer, Star, Text } from 'react-konva';
+import { Stage, Layer, Star, Text, Circle } from 'react-konva';
 
 const PDFJS = window.pdfjsLib;
 
@@ -14,6 +14,8 @@ export default function App() {
   const [pdfRendering, setPdfRendering] = React.useState("");
   const [pageRendering, setPageRendering] = React.useState("");
   const [singlePage, setSinglePage] = React.useState();
+  const layer_page_pdf_ref = useRef(null);
+  const stage_page_pdf_ref = useRef(null);
 
   async function showPdf(event) {
     try {
@@ -55,14 +57,41 @@ export default function App() {
     await page.render(render_context).promise;
     let img = canvas.toDataURL("image/png");
 
+    var imageObj_page = new Image();
+
+    const layer_pdf = layer_page_pdf_ref.current;
+
+    const prev_bg = layer_pdf.find('.background')
+
+    // text_ref.current.text = "mmm"
+    console.log(prev_bg.length)
+    // PDF page data as background	
+    imageObj_page.onload = function () {
+      // remove previous background
+      const prev_bg = layer_pdf.find('.background')
+      if (prev_bg.length > 0) {
+        prev_bg[0].destroy();
+      }
+
+      var background = new Konva.Image({
+        name: 'background',
+        image: imageObj_page,
+      });
+      // add new one
+      layer_pdf.add(background);
+      background.moveToBottom();
+      layer_pdf.draw();
+    };
+    imageObj_page.src = img;
+
+    stage_page_pdf_ref.current.draw();
+
     setSinglePage(img)
     setPageRendering(false)
   }
 
   useEffect(() => {
     pdf && renderSinglePage(currentPage);
-    // pdf && renderAllPages();
-    // console.log(currentPage)
     // eslint-disable-next-line
   }, [pdf, currentPage]);
 
@@ -117,36 +146,19 @@ export default function App() {
               </button>
             </div>
           </div>
-          <div id="image-convas-row">
-            <div style={styles.wrapper}>
-              <div style={styles.imageWrapper}>
-                <img
-                  id="image-generated"
-                  src={singlePage}
-                  alt="pdfImage"
-                  style={{
-                    width: "100%",
-                    height: "100%",
-                    margin: "0",
-                    border: "none"
-                  }}
-                />
-              </div>
-            </div>
-          </div>
           <div id="page-loader" hidden={!pageRendering}>
             Loading page ...
           </div>
-          <button>Show PNG</button>
-          <button>Download PNG</button>
         </div>
       </div>
 
-      <Stage width={100} height={100}>
-        <Layer>
-          <Text text="This is a text"></Text>
-        </Layer>
-      </Stage>
+      <div id="pdf-container">
+        <Stage width={width} height={height} ref={stage_page_pdf_ref}>
+          <Layer id="layer_page_pdf" ref={layer_page_pdf_ref} >
+          </Layer>
+        </Stage>
+      </div>
+
     </div>
   );
 }
