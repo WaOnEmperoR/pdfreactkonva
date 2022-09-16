@@ -7,15 +7,52 @@ const PDFJS = window.pdfjsLib;
 
 export default function App() {
   const [pdf, setPdf] = React.useState("");
-  const [width, setWidth] = React.useState(0);
-  const [height, setHeight] = React.useState(0);
+
+  const [stageWidth, setStageWidth] = React.useState(0);
+  const [stageHeight, setStageHeight] = React.useState(0);
+  const [stageWidthInitial, setStageWidthInitial] = React.useState(0);
+  const [stageHeightInitial, setStageHeightInitial] = React.useState(0);
+
   const [totalPages, setTotalPages] = React.useState(1);
   const [currentPage, setCurrentPage] = React.useState(0);
+
+  const [radius, setRadius] = React.useState(100);
+
   const [pdfRendering, setPdfRendering] = React.useState("");
   const [pageRendering, setPageRendering] = React.useState("");
   const [singlePage, setSinglePage] = React.useState();
+
+  const [scale, setScale] = React.useState(1)
+
+  const [scaleX, setScaleX] = React.useState(1)
+  const [scaleY, setScaleY] = React.useState(1)
+
+  const initialWidthRef = useRef({});
+
   const layer_page_pdf_ref = useRef(null);
   const stage_page_pdf_ref = useRef(null);
+  const container_ref = useRef(null);
+
+  const checkSize = () => {
+    // now we need to fit stage into parent
+    var containerWidth = container_ref.current.offsetWidth;
+    console.log(containerWidth)
+
+    // to do this we need to scale the stage
+    var scale = containerWidth / initialWidthRef.current;
+
+    // console.log(scale)
+
+    var width_updated = initialWidthRef.current * scale
+
+    // console.log(width_updated)
+
+    // setStageWidth(initialWidthRef.current * scale);
+    // setStageHeight(stageHeightInitial * scale);
+
+    setScaleX(scale)
+    setScaleY(scale)
+  };
 
   async function showPdf(event) {
     try {
@@ -52,8 +89,6 @@ export default function App() {
       viewport: viewport
     };
 
-    setWidth(viewport.width);
-    setHeight(viewport.height);
     await page.render(render_context).promise;
     let img = canvas.toDataURL("image/png");
 
@@ -61,10 +96,6 @@ export default function App() {
 
     const layer_pdf = layer_page_pdf_ref.current;
 
-    const prev_bg = layer_pdf.find('.background')
-
-    // text_ref.current.text = "mmm"
-    console.log(prev_bg.length)
     // PDF page data as background	
     imageObj_page.onload = function () {
       // remove previous background
@@ -86,6 +117,15 @@ export default function App() {
 
     stage_page_pdf_ref.current.draw();
 
+    setStageWidthInitial(viewport.width);
+    setStageHeightInitial(viewport.height);
+
+    setStageWidth(viewport.width);
+    setStageHeight(viewport.height);
+
+    initialWidthRef.current = viewport.width
+    console.log("after render : " + initialWidthRef.current)
+
     setSinglePage(img)
     setPageRendering(false)
   }
@@ -94,6 +134,15 @@ export default function App() {
     pdf && renderSinglePage(currentPage);
     // eslint-disable-next-line
   }, [pdf, currentPage]);
+
+  useEffect(() => {
+    window.addEventListener('resize', checkSize);
+
+    // cleanup this component
+    return () => {
+      window.removeEventListener('resize', checkSize);
+    };
+  }, []);
 
   const styles = {
     wrapper: {
@@ -152,8 +201,10 @@ export default function App() {
         </div>
       </div>
 
-      <div id="pdf-container">
-        <Stage width={width} height={height} ref={stage_page_pdf_ref}>
+      <div id="pdf-container" ref={container_ref} style={{
+        border: "1px solid grey", display: "inline-block"
+      }} >
+        <Stage width={stageWidth} height={stageHeight} ref={stage_page_pdf_ref} scaleX={scaleX} scaleY={scaleY}>
           <Layer id="layer_page_pdf" ref={layer_page_pdf_ref} >
           </Layer>
         </Stage>
