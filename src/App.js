@@ -2,6 +2,8 @@ import React, { useEffect, useRef } from "react";
 import "./styles.css";
 import { createRoot } from 'react-dom/client';
 import { Stage, Layer, Star, Text, Circle } from 'react-konva';
+import useImage from "use-image";
+import logo from './img/pngegg.png';
 
 const PDFJS = window.pdfjsLib;
 
@@ -27,7 +29,19 @@ export default function App() {
   const [scaleX, setScaleX] = React.useState(1)
   const [scaleY, setScaleY] = React.useState(1)
 
+  const [xPos, setXPos] = React.useState(0);
+  const [yPos, setYPos] = React.useState(0);
+  const [boxWidth, setBoxWidth] = React.useState(0);
+  const [boxHeight, setBoxHeight] = React.useState(0);
+
+  const [signatureImage] = useImage(logo)
+
   const initialWidthRef = useRef({});
+
+  const xPosRef = useRef({});
+  const yPosRef = useRef({});
+  const boxWidthRef = useRef({});
+  const boxHeightRef = useRef({});
 
   const layer_page_pdf_ref = useRef(null);
   const stage_page_pdf_ref = useRef(null);
@@ -36,7 +50,7 @@ export default function App() {
   const checkSize = () => {
     // now we need to fit stage into parent
     var containerWidth = container_ref.current.offsetWidth;
-    console.log(containerWidth)
+    // console.log(containerWidth)
 
     // to do this we need to scale the stage
     var scale = containerWidth / initialWidthRef.current;
@@ -92,16 +106,52 @@ export default function App() {
     await page.render(render_context).promise;
     let img = canvas.toDataURL("image/png");
 
-    var imageObj_page = new Image();
-
     const layer_pdf = layer_page_pdf_ref.current;
 
+    /**
+     * PART DRAW SIGNATURE BOX
+     */
+    var signatureImage_box = new Konva.Image({
+      x: 20,
+      y: 20,
+      width: 250,
+      height: 176,
+      stroke: 'red',
+      strokeWidth: 2,
+      draggable: true,
+      image: signatureImage
+    })
+
+    layer_pdf.add(signatureImage_box)
+
+    layer_pdf.draw()
+
+    // var imageObj_signature = new Image();
+
+    // imageObj_signature.onload = function () {
+    //   signatureImage_box.image(imageObj_signature);
+
+    //   layer_pdf.add(signatureImage_box);
+    //   layer_pdf.draw();
+    // };
+    // imageObj_signature.src = logo;
+
+    /**
+     * PART DRAW BACKGROUND
+     */
+    var imageObj_page = new Image();
     // PDF page data as background	
     imageObj_page.onload = function () {
       // remove previous background
       const prev_bg = layer_pdf.find('.background')
       if (prev_bg.length > 0) {
         prev_bg[0].destroy();
+      }
+
+      const prev_img = layer_pdf.find('Image')
+      console.log(prev_img.length)
+      for (let i = 1; i < prev_img.length; i++) {
+        prev_img[i].destroy();
       }
 
       var background = new Konva.Image({
@@ -124,7 +174,7 @@ export default function App() {
     setStageHeight(viewport.height);
 
     initialWidthRef.current = viewport.width
-    console.log("after render : " + initialWidthRef.current)
+    // console.log("after render : " + initialWidthRef.current)
 
     setSinglePage(img)
     setPageRendering(false)
