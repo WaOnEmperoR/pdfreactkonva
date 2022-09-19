@@ -34,6 +34,8 @@ export default function App() {
   const [boxWidth, setBoxWidth] = React.useState(0);
   const [boxHeight, setBoxHeight] = React.useState(0);
 
+  const [firstOpened, setFirstOpened] = React.useState(true);
+
   const [signatureImage] = useImage(logo)
 
   const initialWidthRef = useRef({});
@@ -42,6 +44,9 @@ export default function App() {
   const yPosRef = useRef({});
   const boxWidthRef = useRef({});
   const boxHeightRef = useRef({});
+
+  const stageWidthRef = useRef({});
+  const stageHeightRef = useRef({});
 
   const layer_page_pdf_ref = useRef(null);
   const stage_page_pdf_ref = useRef(null);
@@ -106,35 +111,117 @@ export default function App() {
     await page.render(render_context).promise;
     let img = canvas.toDataURL("image/png");
 
+    setStageWidthInitial(viewport.width);
+    setStageHeightInitial(viewport.height);
+
+    setStageWidth(viewport.width);
+    setStageHeight(viewport.height);
+
+    stageWidthRef.current = viewport.width
+    stageHeightRef.current = viewport.height
+
+    initialWidthRef.current = viewport.width
+
     const layer_pdf = layer_page_pdf_ref.current;
 
+    if (firstOpened) {
+      boxWidthRef.current = 250
+      boxHeightRef.current = 176
+    }
+
+    setFirstOpened(false)
     /**
      * PART DRAW SIGNATURE BOX
      */
+    var strokeWidth = 2
+
     var signatureImage_box = new Konva.Image({
       x: 20,
       y: 20,
       width: 250,
       height: 176,
       stroke: 'red',
-      strokeWidth: 2,
+      strokeWidth: strokeWidth,
       draggable: true,
-      image: signatureImage
+      image: signatureImage,
+      dragBoundFunc: (pos) => {
+        console.log(pos)
+        console.log("--> " + boxWidthRef.current + " -- " + boxHeightRef.current)
+
+        var topleft_x = pos.x;
+        var topleft_y = pos.y;
+        var bottomright_x = pos.x + boxWidthRef.current;
+        var bottomright_y = pos.y + boxHeightRef.current;
+
+        // if located in left border then cannot drag in horizontal direction 
+        var canDragLeft = topleft_x > strokeWidth;
+
+        // if located in top border then cannot drag in vertical direction
+        var canDragTop = topleft_y > strokeWidth;
+
+        // if located in right border then cannot drag in horizontal direction 
+        var canDragRight = bottomright_x < stageWidthRef.current - strokeWidth;
+
+        // if located in bottom border then cannot drag in vertical direction
+        var canDragBottom = bottomright_y < stageHeightRef.current - strokeWidth;
+
+        var newX = pos.x;
+        var newY = pos.y;
+
+        if (!canDragLeft) {
+          newX = strokeWidth;
+        }
+        else if (!canDragRight) {
+          newX = stageWidthRef.current - boxWidthRef.current - strokeWidth;
+        }
+
+        if (!canDragTop) {
+          newY = strokeWidth;
+        }
+        else if (!canDragBottom) {
+          newY = stageHeightRef.current - boxHeightRef.current - strokeWidth;
+        }
+
+        return {
+          x: newX,
+          y: newY
+        }
+      }
     })
 
     layer_pdf.add(signatureImage_box)
 
-    layer_pdf.draw()
+    const tr = new Konva.Transformer({
+      id: 'transformer_box',
+      node: signatureImage_box,
+      keepRatio: true,
+      rotateEnabled: false,
+      ignoreStroke: true,
+      enabledAnchors: ['top-left', 'top-right', 'bottom-left', 'bottom-right'],
+      boundBoxFunc: (oldBox, newBox) => {
+        console.log(newBox)
 
-    // var imageObj_signature = new Image();
+        const isOut =
+          newBox.x < 0 ||
+          newBox.y < 0 ||
+          newBox.x + newBox.width > stageWidthRef.current ||
+          newBox.y + newBox.height > stageHeightRef.current;
 
-    // imageObj_signature.onload = function () {
-    //   signatureImage_box.image(imageObj_signature);
+        // if new bounding box is out of visible viewport, let's just skip transforming
+        // this logic can be improved by still allow some transforming if we have small available space
+        if (isOut) {
+          boxWidthRef.current = oldBox.width
+          boxHeightRef.current = oldBox.height
 
-    //   layer_pdf.add(signatureImage_box);
-    //   layer_pdf.draw();
-    // };
-    // imageObj_signature.src = logo;
+          return oldBox;
+        }
+        boxWidthRef.current = newBox.width
+        boxHeightRef.current = newBox.height
+
+        return newBox;
+      },
+    });
+    layer_pdf.add(tr);
 
     /**
      * PART DRAW BACKGROUND
@@ -149,9 +236,15 @@ export default function App() {
       }
 
       const prev_img = layer_pdf.find('Image')
-      console.log(prev_img.length)
+      // console.log(prev_img.length)
       for (let i = 1; i < prev_img.length; i++) {
         prev_img[i].destroy();
+      }
+
+      const prev_transfomer = layer_pdf.find('Transformer')
+      // console.log(prev_transfomer.length)
+      for (let i = 1; i < prev_transfomer.length; i++) {
+        prev_transfomer[i].destroy();
       }
 
       var background = new Konva.Image({
@@ -167,13 +260,7 @@ export default function App() {
 
     stage_page_pdf_ref.current.draw();
 
-    setStageWidthInitial(viewport.width);
-    setStageHeightInitial(viewport.height);
-
-    setStageWidth(viewport.width);
-    setStageHeight(viewport.height);
-
-    initialWidthRef.current = viewport.width
+    layer_pdf.draw()
     // console.log("after render : " + initialWidthRef.current)
 
     setSinglePage(img)
